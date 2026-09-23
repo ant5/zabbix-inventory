@@ -1,0 +1,134 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: 846977d1dfed4968bc5f8bdb363285bc
+      name: 'Templates/Operating systems'
+  templates:
+    - uuid: fcd79521aec5467aa35cfca436dd45e3
+      template: 'Jail in FreeBSD by Zabbix agent active'
+      name: 'Jail in FreeBSD by Zabbix agent active'
+      description: |
+        This is an unofficial template for monitoring jail in FreeBSD as a separate host. 
+        Tested with Zabbix agent 7.4.
+        
+        # Author: Anthony Pankov
+      vendor:
+        name: AP
+        version: '1.1'
+      groups:
+        - name: 'Templates/Operating systems'
+      tags:
+        - tag: class
+          value: os
+        - tag: target
+          value: freebsd
+        - tag: container
+          value: '{HOST.HOST}'
+      macros:
+        - macro: '{$AGENT.NODATA_TIMEOUT}'
+          value: 20m
+          description: 'No data timeout for active agents. Consider to keep it relatively high.'
+          config:
+            type: TEXT
+            priority: '1'
+            section_name: Thresholds
+            label: 'Time since the last agent data was received'
+            description: 'Threshold value of time since the last data was received from the agent.'
+        - macro: '{$AGENT.TIMEOUT}'
+          value: 1m
+          description: 'Timeout after which agent and a whole system is considered unavailable.'
+          config:
+            type: TEXT
+            priority: '2'
+            label: 'Time since the last Zabbix agent connection'
+            description: 'Timeout after which agent and a whole system is considered unavailable.'
+      items:
+        - uuid: 3ce131bcdc1745ee9c5370b3d91d94bd
+          name: 'Host name of Zabbix agent running'
+          type: ZABBIX_ACTIVE
+          key: agent.hostname
+          delay: 1h
+          value_type: CHAR
+          preprocessing:
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          tags:
+            - tag: component
+              value: system
+        - uuid: 95bdddcd51f14173ac5a45452aa8f018
+          name: 'Zabbix agent ping'
+          type: ZABBIX_ACTIVE
+          key: agent.ping
+          description: 'The agent always returns "1" for this item. May be used in combination with `nodata()` for the availability check.'
+          valuemap:
+            name: 'Zabbix agent ping status'
+          tags:
+            - tag: component
+              value: system
+          triggers:
+            - uuid: 8ca400da48f04d7c83fdf37c1fe6fe3c
+              expression: 'nodata(/Jail in FreeBSD by Zabbix agent active/agent.ping,{$AGENT.NODATA_TIMEOUT})=1'
+              name: 'Jail {HOST.HOST}: Zabbix agent is not available'
+              event_name: 'Jail {HOST.HOST}: Zabbix agent is not available (or nodata for {$AGENT.NODATA_TIMEOUT})'
+              priority: AVERAGE
+              description: 'For active agents, `nodata()` with `agent.ping` is used with `{$AGENT.NODATA_TIMEOUT}` as a time threshold.'
+              manual_close: 'YES'
+              tags:
+                - tag: scope
+                  value: availability
+        - uuid: b86bf041575a4fda99c95fa791a71a99
+          name: 'Active agent availability'
+          type: INTERNAL
+          key: 'zabbix[host,active_agent,available]'
+          description: |
+            Availability of active checks on the host. The value of this item corresponds to availability icons in the host list.
+            Possible values:
+            0 - unknown
+            1 - available
+            2 - not available
+          valuemap:
+            name: zabbix.host.active_agent.available
+          tags:
+            - tag: component
+              value: health
+            - tag: component
+              value: network
+          triggers:
+            - uuid: ff2b18bd1f1c4d6abfd74b91f174cfaf
+              expression: 'min(/Jail in FreeBSD by Zabbix agent active/zabbix[host,active_agent,available],{$AGENT.TIMEOUT})=2'
+              name: 'Jail {HOST.HOST}: Lost'
+              opdata: 'Current state: {ITEM.LASTVALUE1}'
+              priority: HIGH
+              description: 'Jail may be down, unreachable, or have agent problem. Agent has not sent a heartbeat for a prolonged time.'
+              tags:
+                - tag: scope
+                  value: availability
+        - uuid: 7bd4bc7364a34f7ab76f9a5eddc48bbf
+          name: 'Version of Zabbix agent running'
+          type: ZABBIX_ACTIVE
+          key: agent.version
+          delay: 1h
+          value_type: CHAR
+          preprocessing:
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          tags:
+            - tag: component
+              value: application
+      valuemaps:
+        - uuid: db814fdd9fbf41089923765d8937d027
+          name: zabbix.host.active_agent.available
+          mappings:
+            - value: '0'
+              newvalue: 'not available'
+            - value: '1'
+              newvalue: available
+            - value: '2'
+              newvalue: unknown
+        - uuid: 4fab76c345304e1fb448a507800ee681
+          name: 'Zabbix agent ping status'
+          mappings:
+            - value: '1'
+              newvalue: Up

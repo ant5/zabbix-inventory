@@ -11,4 +11,4 @@ This template also has "traditional" for OS templates Item/Trigger/Macro for AGE
 
 # template_freebsd_active
 
-This templated was maked by some kind man in the Internet by converting official Zabbix Freebsd Template to an active version. The only change for the file here is introducing "container" tag with a value of a system hostname ({$HOST.HOST} to be more precise).
+This template was maked by some kind man in the Internet by converting official Zabbix Freebsd Template to an active version. The only change for the file here is introducing "container" tag with a value of a system hostname ({$HOST.HOST} to be more precise).
